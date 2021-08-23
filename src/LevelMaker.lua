@@ -22,19 +22,31 @@ function LevelMaker.generate(width, height)
     local tileset = math.random(20)
     local topperset = math.random(20)
 
+    local xLockBlock = math.random(math.max(1, width - 10) + 1)
+    local xKey = math.random(math.max(1, width - 10) + 1)
+
+    local lockBlockColor = math.random(4)
+
+
+    local floorLevel = 7
     -- insert blank tables into tiles for later access
     for x = 1, height do
         table.insert(tiles, {})
     end
 
-    -- ensure first tile is always floor
-    for y = 7, height do
+    -- lay out the empty space
+    for y = 1, 6 do
         table.insert(tiles[y],
-            Tile(1, y, tileID, y == 7 and topper or nil, tileset, topperset))
+            Tile(1, y, TILE_ID_EMPTY, nil, tileset, topperset))
+    end
+    -- ensure first tile is always floor
+    for y = floorLevel, height do
+        table.insert(tiles[y],
+            Tile(1, y, TILE_ID_GROUND, y == floorLevel and topper or nil, tileset, topperset))
     end
 
     -- column by column generation instead of row; sometimes better for platformers
-    for x = 1, width do
+    for x = 2, width do
         local tileID = TILE_ID_EMPTY
         
         -- lay out the empty space
@@ -44,8 +56,8 @@ function LevelMaker.generate(width, height)
         end
 
         -- chance to just be emptiness
-        if math.random(7) == 1 then
-            for y = 7, height do
+        if math.random(7) == 1 and x ~= xLockBlock and x ~= xKey then
+            for y = floorLevel, height do
                 table.insert(tiles[y],
                     Tile(x, y, tileID, nil, tileset, topperset))
             end
@@ -58,6 +70,16 @@ function LevelMaker.generate(width, height)
             for y = 7, height do
                 table.insert(tiles[y],
                     Tile(x, y, tileID, y == 7 and topper or nil, tileset, topperset))
+            end
+
+            if x == xLockBlock or x == xKey then
+                if x == xLockBlock then
+                    LevelMaker.spawnLockBlock(objects, x, blockHeight, lockBlockColor)
+                end
+                if x == xKey then
+                    LevelMaker.spawnKey(objects, x, floorLevel-1, lockBlockColor)
+                end
+                goto continue
             end
 
             -- chance to generate a pillar
@@ -164,6 +186,8 @@ function LevelMaker.generate(width, height)
                     }
                 )
             end
+
+            ::continue::
         end
     end
 
@@ -171,4 +195,59 @@ function LevelMaker.generate(width, height)
     map.tiles = tiles
     
     return GameLevel(entities, objects, map)
+end
+
+function LevelMaker.spawnLockBlock(objects, x, y, color)
+    local lockBlock = GameObject {
+        texture = 'lock-blocks',
+        x = (x - 1) * TILE_SIZE,
+        y = (y - 1) * TILE_SIZE,
+        width = 16,
+        height = 16,
+
+        -- make it a random variant
+        frame = color + 4,
+        collidable = true,
+        hit = false,
+        solid = true,
+
+        -- collision function takes itself
+        onCollide = function(object, player)
+
+            -- unlock the block
+            if player.hasKey then
+                objects['lock-block'] = nil
+                gSounds['pickup']:play()
+            else
+                gSounds['empty-block']:play()
+            end
+
+        end
+    }
+
+    objects['lock-block'] = lockBlock
+end
+
+function LevelMaker.spawnKey(objects, x, y, color)
+    
+    -- maintain reference so we can set it to nil
+    local key = GameObject {
+        texture = 'lock-blocks',
+        x = (x - 1) * TILE_SIZE,
+        y = (y - 1) * TILE_SIZE - 4,
+        width = 16,
+        height = 16,
+        frame = color,
+        collidable = true,
+        consumable = true,
+        solid = false,
+
+        -- player obtains the key
+        onConsume = function(player, object)
+            gSounds['pickup']:play()
+            player.hasKey = true
+        end
+    }
+
+    table.insert(objects, key)
 end
