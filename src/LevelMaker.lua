@@ -27,6 +27,12 @@ function LevelMaker.generate(width, height)
         table.insert(tiles, {})
     end
 
+    -- ensure first tile is always floor
+    for y = 7, height do
+        table.insert(tiles[y],
+            Tile(1, y, tileID, y == 7 and topper or nil, tileset, topperset))
+    end
+
     -- column by column generation instead of row; sometimes better for platformers
     for x = 1, width do
         local tileID = TILE_ID_EMPTY
