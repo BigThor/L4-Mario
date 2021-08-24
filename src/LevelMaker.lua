@@ -24,8 +24,8 @@ function LevelMaker.generate(width, height)
     local tileset = math.random(20)
     local topperset = math.random(20)
 
-    local xLockBlock = math.random(math.max(1, levelWidth - 10) + 1)
-    local xKey = math.random(math.max(1, levelWidth - 10) + 1)
+    local xLockBlock = math.min(math.random(math.max(2, levelWidth *3/4)) + 1, levelWidth-2)
+    local xKey = math.min(math.random(math.max(2, levelWidth *3/4)) + 1, levelWidth-2)
 
     local lockBlockColor = math.random(4)
 
@@ -293,6 +293,7 @@ function LevelMaker.spawnGoalFlag()
         -- collision function takes itself
         onCollide = function(object, player)
             gSounds['pickup']:play()
+            LevelMaker.nextLevel(player)
         end
     }
     
@@ -310,6 +311,7 @@ function LevelMaker.spawnGoalFlag()
         -- collision function takes itself
         onCollide = function(object, player)
             gSounds['pickup']:play()
+            LevelMaker.nextLevel(player)
         end
     }
 
@@ -327,6 +329,7 @@ function LevelMaker.spawnGoalFlag()
         -- collision function takes itself
         onCollide = function(object, player)
             gSounds['pickup']:play()
+            LevelMaker.nextLevel(player)
         end
     }
 
@@ -337,18 +340,20 @@ function LevelMaker.spawnGoalFlag()
         width = 16,
         height = 16,
         frame = flagColor * flagsSpritesheetWidth + POLE_COLORS + 1,
-        collidable = true,
+        collidable = false,
         consumable = false,
         solid = false,
-
-        -- collision function takes itself
-        onCollide = function(object, player)
-
-        end
     }
 
     table.insert(objects, flagpoleBase)
     table.insert(objects, flagpoleCenter)
     table.insert(objects, flagpoleTop)
     table.insert(objects, flag)
+end
+
+function LevelMaker.nextLevel(player)
+    gStateMachine:change('play', {
+        score = player.score,
+        width = levelWidth + NEXT_LEVEL_INCREMENT, height = LEVEL_HEIGHT
+    })
 end

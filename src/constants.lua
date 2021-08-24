@@ -94,3 +94,8 @@ JUMP_BLOCKS = {}
 for i = 1, 30 do
     table.insert(JUMP_BLOCKS, i)
 end
+
+-- Level related constants
+LEVEL_WIDTH = 30
+LEVEL_HEIGHT = 10
+NEXT_LEVEL_INCREMENT = 20

@@ -12,7 +12,7 @@ Player = Class{__includes = Entity}
 
 function Player:init(def)
     Entity.init(self, def)
-    self.score = 0
+    self.score = def.score
     self.hasKey = false
 end
 
@@ -78,6 +78,8 @@ function Player:checkObjectCollisions()
             elseif object.consumable then
                 object.onConsume(self)
                 table.remove(self.level.objects, k)
+            elseif object.collidable then
+                object.onCollide(object, self)
             end
         end
     end

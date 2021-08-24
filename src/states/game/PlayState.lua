@@ -10,7 +10,12 @@ PlayState = Class{__includes = BaseState}
 function PlayState:init()
     self.camX = 0
     self.camY = 0
-    self.level = LevelMaker.generate(100, 10)
+    
+end
+
+
+function PlayState:enter(params)
+    self.level = LevelMaker.generate(params.width, params.height)
     self.tileMap = self.level.tileMap
     self.background = math.random(3)
     self.backgroundX = 0
@@ -28,6 +33,7 @@ function PlayState:init()
             ['jump'] = function() return PlayerJumpState(self.player, self.gravityAmount) end,
             ['falling'] = function() return PlayerFallingState(self.player, self.gravityAmount) end
         },
+        score = params.score,
         map = self.tileMap,
         level = self.level
     })
