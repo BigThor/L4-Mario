@@ -13,7 +13,9 @@ LevelMaker = Class{}
 function LevelMaker.generate(width, height)
     local tiles = {}
     local entities = {}
-    local objects = {}
+    objects = {}
+    levelWidth = width
+    levelHeight = height
 
     local tileID = TILE_ID_GROUND
     
@@ -22,31 +24,32 @@ function LevelMaker.generate(width, height)
     local tileset = math.random(20)
     local topperset = math.random(20)
 
-    local xLockBlock = math.random(math.max(1, width - 10) + 1)
-    local xKey = math.random(math.max(1, width - 10) + 1)
+    local xLockBlock = math.random(math.max(1, levelWidth - 10) + 1)
+    local xKey = math.random(math.max(1, levelWidth - 10) + 1)
 
     local lockBlockColor = math.random(4)
 
 
-    local floorLevel = 7
+    floorLevel = 7
     -- insert blank tables into tiles for later access
-    for x = 1, height do
+    for x = 1, levelHeight do
         table.insert(tiles, {})
     end
 
+    -- ensure first tile is always floor for the player
     -- lay out the empty space
     for y = 1, 6 do
         table.insert(tiles[y],
             Tile(1, y, TILE_ID_EMPTY, nil, tileset, topperset))
     end
-    -- ensure first tile is always floor
-    for y = floorLevel, height do
+    -- lay out the floor
+    for y = floorLevel, levelHeight do
         table.insert(tiles[y],
             Tile(1, y, TILE_ID_GROUND, y == floorLevel and topper or nil, tileset, topperset))
     end
 
     -- column by column generation instead of row; sometimes better for platformers
-    for x = 2, width do
+    for x = 2, levelWidth -2 do
         local tileID = TILE_ID_EMPTY
         
         -- lay out the empty space
@@ -57,7 +60,7 @@ function LevelMaker.generate(width, height)
 
         -- chance to just be emptiness
         if math.random(7) == 1 and x ~= xLockBlock and x ~= xKey then
-            for y = floorLevel, height do
+            for y = floorLevel, levelHeight do
                 table.insert(tiles[y],
                     Tile(x, y, tileID, nil, tileset, topperset))
             end
@@ -67,17 +70,17 @@ function LevelMaker.generate(width, height)
             -- height at which we would spawn a potential jump block
             local blockHeight = 4
 
-            for y = 7, height do
+            for y = 7, levelHeight do
                 table.insert(tiles[y],
                     Tile(x, y, tileID, y == 7 and topper or nil, tileset, topperset))
             end
 
             if x == xLockBlock or x == xKey then
                 if x == xLockBlock then
-                    LevelMaker.spawnLockBlock(objects, x, blockHeight, lockBlockColor)
+                    LevelMaker.spawnLockBlock(x, blockHeight, lockBlockColor)
                 end
                 if x == xKey then
-                    LevelMaker.spawnKey(objects, x, floorLevel-1, lockBlockColor)
+                    LevelMaker.spawnKey(x, floorLevel-1, lockBlockColor)
                 end
                 goto continue
             end
@@ -191,13 +194,27 @@ function LevelMaker.generate(width, height)
         end
     end
 
-    local map = TileMap(width, height)
+    -- ensure last two tile is always floor for the flag
+    -- lay out the empty space
+    for x = levelWidth-1, levelWidth do
+        for y = 1, 6 do
+            table.insert(tiles[y],
+                Tile(x, y, TILE_ID_EMPTY, nil, tileset, topperset))
+        end
+        -- lay out the floor
+        for y = floorLevel, levelHeight do
+            table.insert(tiles[y],
+                Tile(x, y, TILE_ID_GROUND, y == floorLevel and topper or nil, tileset, topperset))
+        end
+    end
+
+    local map = TileMap(levelWidth, levelHeight)
     map.tiles = tiles
     
     return GameLevel(entities, objects, map)
 end
 
-function LevelMaker.spawnLockBlock(objects, x, y, color)
+function LevelMaker.spawnLockBlock(x, y, color)
     local lockBlock = GameObject {
         texture = 'lock-blocks',
         x = (x - 1) * TILE_SIZE,
@@ -218,6 +235,7 @@ function LevelMaker.spawnLockBlock(objects, x, y, color)
             if player.hasKey then
                 objects['lock-block'] = nil
                 gSounds['pickup']:play()
+                LevelMaker.spawnGoalFlag()
             else
                 gSounds['empty-block']:play()
             end
@@ -228,7 +246,7 @@ function LevelMaker.spawnLockBlock(objects, x, y, color)
     objects['lock-block'] = lockBlock
 end
 
-function LevelMaker.spawnKey(objects, x, y, color)
+function LevelMaker.spawnKey(x, y, color)
     
     -- maintain reference so we can set it to nil
     local key = GameObject {
@@ -250,4 +268,87 @@ function LevelMaker.spawnKey(objects, x, y, color)
     }
 
     table.insert(objects, key)
+end
+
+
+function LevelMaker.spawnGoalFlag()
+    local flagpoleColor = math.random(POLE_COLORS)
+    local flagColor = math.random(FLAG_COLORS) - 1
+
+    local flagsSpritesheetWidth = 9
+    local goalFlagX = levelWidth - 2
+    local goalFlagY = floorLevel - 2
+
+    local flagpoleTop = GameObject {
+        texture = 'flags',
+        x = goalFlagX * TILE_SIZE,
+        y = (goalFlagY - 2) * TILE_SIZE,
+        width = 16,
+        height = 16,
+        frame = flagpoleColor,
+        collidable = true,
+        consumable = false,
+        solid = false,
+
+        -- collision function takes itself
+        onCollide = function(object, player)
+            gSounds['pickup']:play()
+        end
+    }
+    
+    local flagpoleCenter = GameObject {
+        texture = 'flags',
+        x = goalFlagX * TILE_SIZE,
+        y = (goalFlagY - 1) * TILE_SIZE,
+        width = 16,
+        height = 16,
+        frame = flagpoleColor + flagsSpritesheetWidth,
+        collidable = true,
+        consumable = false,
+        solid = false,
+
+        -- collision function takes itself
+        onCollide = function(object, player)
+            gSounds['pickup']:play()
+        end
+    }
+
+    local flagpoleBase = GameObject {
+        texture = 'flags',
+        x = goalFlagX * TILE_SIZE,
+        y = (goalFlagY) * TILE_SIZE,
+        width = 16,
+        height = 16,
+        frame = flagpoleColor + flagsSpritesheetWidth * 2,
+        collidable = true,
+        consumable = false,
+        solid = false,
+
+        -- collision function takes itself
+        onCollide = function(object, player)
+            gSounds['pickup']:play()
+        end
+    }
+
+    local flag = GameObject {
+        texture = 'flags',
+        x = goalFlagX * TILE_SIZE + 8,
+        y = (goalFlagY - 2) * TILE_SIZE + 4,
+        width = 16,
+        height = 16,
+        frame = flagColor * flagsSpritesheetWidth + POLE_COLORS + 1,
+        collidable = true,
+        consumable = false,
+        solid = false,
+
+        -- collision function takes itself
+        onCollide = function(object, player)
+
+        end
+    }
+
+    table.insert(objects, flagpoleBase)
+    table.insert(objects, flagpoleCenter)
+    table.insert(objects, flagpoleTop)
+    table.insert(objects, flag)
 end

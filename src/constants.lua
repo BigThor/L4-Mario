@@ -86,6 +86,9 @@ GEMS = {
     1, 2, 3, 4, 5, 6, 7, 8
 }
 
+POLE_COLORS = 6
+FLAG_COLORS = 4
+
 JUMP_BLOCKS = {}
 
 for i = 1, 30 do
